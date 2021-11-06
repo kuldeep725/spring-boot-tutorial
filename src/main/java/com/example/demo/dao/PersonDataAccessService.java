@@ -1,14 +1,21 @@
 package com.example.demo.dao;
 
 import com.example.demo.model.Person;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.SQLType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository("postgres")
 public class PersonDataAccessService implements PersonDao{
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Override
     public int insertPerson(UUID id, Person person) {
         return 0;
@@ -16,12 +23,29 @@ public class PersonDataAccessService implements PersonDao{
 
     @Override
     public List<Person> selectAllPeople() {
-        return List.of(new Person(UUID.randomUUID(), "FROM POSTGRES DB"));
+        final String sql = "SELECT id, name FROM person";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            return new Person(
+                UUID.fromString(rs.getString("id")),
+                rs.getString("name")
+            );
+        });
     }
 
     @Override
     public Optional<Person> selectPersonById(UUID id) {
-        return Optional.empty();
+        final String sql = "SELECT id, name FROM person WHERE id=?";
+        Person person = jdbcTemplate.queryForObject(
+            sql,
+            (resultSet, i) -> {
+                UUID personId = UUID.fromString(resultSet.getString("id"));
+                String name = resultSet.getString("name");
+                return new Person(personId, name);
+            },
+            new Object[]{id}
+        );
+
+        return Optional.ofNullable(person);
     }
 
     @Override
